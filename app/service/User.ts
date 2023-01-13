@@ -20,4 +20,20 @@ export default class User extends Service {
       return error;
     }
   }
+
+  // 修改用户信息
+  public async editUserInfo(params) {
+    const { app } = this;
+    try {
+      return await app.mysql.update(
+        'user',
+        {
+          ...params,
+        },
+        { id: params.id }
+      );
+    } catch (error) {
+      return error;
+    }
+  }
 }

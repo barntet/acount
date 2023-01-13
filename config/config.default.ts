@@ -43,6 +43,24 @@ export default (appInfo: EggAppInfo) => {
     agent: false,
   };
 
+  config.jwt = {
+    secret: 'barnett',
+  };
+
+  config.multipart = {
+    mode: 'file',
+  };
+
+  config.userConfig = {
+    uploadDir: 'app/public/upload',
+  };
+
+  config.cors = {
+    origin: '*', // 允许所有跨越使用
+    credentials: true, // 允许cookie跨域
+    allowMethods: 'GET,HEAD,PUT,POST,DELETE,PATCH',
+  };
+
   // the return config will combines to EggAppConfig
   return {
     ...config,

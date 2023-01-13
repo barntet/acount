@@ -15,6 +15,28 @@
   <h1>
     <%-title%>
   </h1>
+
+  <input type="file" id="upload" />
+  <script>
+    var input = document.getElementById('upload')
+    // addEventListener
+    input.addEventListener('change', function (e) {
+      var file = input.files[0];
+      let formData = new FormData();
+      formData.append('file', file);
+
+      fetch('http://localhost:7001/api/upload', {
+        method: 'POST',
+        body: formData
+      }).then(res => {
+        if (res.ok) {
+          return res.json()
+        }
+      }).then(res => {
+        console.log(res)
+      })
+    })
+  </script>
 </body>
 
 </html>
