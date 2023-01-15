@@ -68,6 +68,7 @@ export default class UserController extends Controller {
     const { username, password } = ctx.request.body;
     // 根据用户名到数据库查找相应id的的信息
     const userInfo: any = await ctx.service.user.getUserByName(username);
+      console.log(1212, userInfo)
     // 没找到说明没有该用户
     if (!userInfo || !userInfo?.id) {
       ctx.body = {
@@ -94,7 +95,7 @@ export default class UserController extends Controller {
         username: userInfo.username,
         exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
       },
-      app.config.jwt.secret
+      app.config.jwt.secret,
     );
     ctx.body = {
       code: 200,
@@ -111,14 +112,14 @@ export default class UserController extends Controller {
       | decodeType
       | string;
     const isDecode = decode && typeof decode === 'object';
-    const userInfo = isDecode
+    const userInfo: userInfoType | null = isDecode
       ? ((await ctx.service.user.getUserByName(
-          decode.username
-        )) as userInfoType)
+        decode.username,
+      )) as userInfoType)
       : null;
     if (!userInfo || !isDecode) {
       ctx.body = {
-        code: 400,
+        code: 500,
         msg: '用户信息不存在',
         data: null,
       };
@@ -148,10 +149,10 @@ export default class UserController extends Controller {
         | decodeType
         | string;
       const isDecode = decode && typeof decode === 'object';
-      const userInfo = isDecode
+      const userInfo: userInfoType | null = isDecode
         ? ((await ctx.service.user.getUserByName(
-            decode.username
-          )) as userInfoType)
+          decode.username,
+        )) as userInfoType)
         : null;
       if (!userInfo || !isDecode) {
         ctx.body = {

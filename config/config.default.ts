@@ -35,7 +35,7 @@ export default (appInfo: EggAppInfo) => {
       port: '3306',
       user: 'root',
       password: 'mysqlhhxx0@',
-      database: 'dev-record',
+      database: 'ledger',
     },
     // 是否加载到app上 默认开启
     app: true,
@@ -59,6 +59,11 @@ export default (appInfo: EggAppInfo) => {
     origin: '*', // 允许所有跨越使用
     credentials: true, // 允许cookie跨域
     allowMethods: 'GET,HEAD,PUT,POST,DELETE,PATCH',
+  };
+
+  config.sequelize = {
+    database: 'ledger',
+    password: 'mysqlhhxx0@',
   };
 
   // the return config will combines to EggAppConfig

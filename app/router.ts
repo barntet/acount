@@ -19,6 +19,11 @@ export default (app: Application) => {
   router.post('/api/upload', controller.upload.upload);
 
   router.post('/api/bill/add', _jwt, controller.bill.add);
+  router.get('/api/bill/list', _jwt, controller.bill.list);
+  router.get('/api/bill/detail', _jwt, controller.bill.detail);
+  router.post('/api/bill/update', _jwt, controller.bill.update);
+  router.post('/api/bill/delete', _jwt, controller.bill.delete);
+  router.get('/api/bill/data', _jwt, controller.bill.data);
 
   router.post('/api/user/test', _jwt, controller.user.test);
 };
