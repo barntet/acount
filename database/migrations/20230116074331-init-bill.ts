@@ -1,3 +1,5 @@
+'use strict';
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
@@ -8,13 +10,15 @@ module.exports = {
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
     const { INTEGER, STRING, BIGINT } = Sequelize;
-    await queryInterface.createTable('user', {
+    await queryInterface.createTable('bill', {
       id: { type: INTEGER, primaryKey: true, autoIncrement: true },
-      username: STRING(30),
-      password: STRING(30),
-      signature: STRING(100),
-      avatar: STRING(100),
-      ctime: BIGINT,
+      pay_type: INTEGER,
+      amount: INTEGER,
+      date: BIGINT,
+      type_id: INTEGER,
+      type_name: STRING(30),
+      user_id: INTEGER,
+      remark: STRING(100),
     });
   },
 
@@ -25,6 +29,6 @@ module.exports = {
      * Example:
      * await queryInterface.dropTable('users');
      */
-    await queryInterface.dropTable('user');
+    await queryInterface.dropTable('bill');
   },
 };

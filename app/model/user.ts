@@ -3,17 +3,17 @@ import { Application } from 'egg';
 // use: app.model.User.
 
 export default (app: Application) => {
-  const { STRING, INTEGER, DATE } = app.Sequelize;
+  const { STRING, INTEGER, BIGINT } = app.Sequelize;
 
   const user = app.model.define(
     'user',
     {
       id: { type: INTEGER, primaryKey: true, autoIncrement: true },
-      username: STRING(100),
-      password: STRING(100),
+      username: STRING(30),
+      password: STRING(30),
       signature: STRING(100),
       avatar: STRING(100),
-      ctime: DATE,
+      ctime: BIGINT,
     },
     { freezeTableName: true, timestamps: false, tableName: 'user' }
   );
@@ -26,5 +26,5 @@ export type userInfoType = {
   password: string;
   signature: string;
   avatar: string;
-  ctime: string;
+  ctime: number;
 } | null;

@@ -1,3 +1,5 @@
+'use strict';
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
@@ -7,14 +9,12 @@ module.exports = {
      * Example:
      * await queryInterface.createTable('users', { id: Sequelize.INTEGER });
      */
-    const { INTEGER, STRING, BIGINT } = Sequelize;
-    await queryInterface.createTable('user', {
+    const { INTEGER, STRING } = Sequelize;
+    await queryInterface.createTable('type', {
       id: { type: INTEGER, primaryKey: true, autoIncrement: true },
-      username: STRING(30),
-      password: STRING(30),
-      signature: STRING(100),
-      avatar: STRING(100),
-      ctime: BIGINT,
+      name: STRING(100),
+      type: INTEGER,
+      user_id: INTEGER,
     });
   },
 
@@ -25,6 +25,6 @@ module.exports = {
      * Example:
      * await queryInterface.dropTable('users');
      */
-    await queryInterface.dropTable('user');
+    await queryInterface.dropTable('type');
   },
 };

@@ -1,18 +1,28 @@
 import moment from 'moment';
 import { Controller } from 'egg';
 
-type decodeType = {
-  id: number;
-  username: string;
-  exp: number;
-  iat: number;
-};
-
 type item = {
-  date: number | string;
+  date: number;
   type_id: number | string;
   amount: number | string;
-  pay_type: number | string
+  pay_type: number | string;
+};
+
+const ParamError = {
+  code: 400,
+  msg: '参数错误',
+  data: false,
+};
+
+const InterfaceError = {
+  code: 500,
+  msg: '接口异常',
+  data: false,
+};
+
+const PayTypeEnum = {
+  Expense: 1,
+  Income: 2,
 };
 
 export default class BillController extends Controller {
@@ -23,34 +33,24 @@ export default class BillController extends Controller {
       type_id,
       type_name,
       pay_type,
+      date = moment().valueOf(),
       remark = '',
     } = ctx.request.body;
+
+    //  判空
     if (!amount || !type_id || !type_name || !pay_type) {
-      ctx.body = {
-        code: 400,
-        msg: '参数错误',
-        data: null,
-      };
+      ctx.body = ParamError;
       return;
     }
     try {
       const token = ctx.request.header.authorization as string;
-      const decode = (await app.jwt.verify(token, app.config.jwt.secret)) as
-        | decodeType
-        | string;
-      if (!(decode && typeof decode === 'object')) {
-        ctx.body = {
-          code: 500,
-          msg: '接口异常',
-          data: false,
-        };
-        return;
-      }
+      const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
+
       await ctx.service.bill.add({
         amount,
         type_id,
         type_name,
-        date: new Date().valueOf(),
+        date,
         pay_type,
         remark,
         user_id: decode.id,
@@ -60,37 +60,36 @@ export default class BillController extends Controller {
         msg: '添加成功',
         data: true,
       };
-    } catch (error) {
-      return error;
+    } catch {
+      ctx.body = InterfaceError;
     }
   }
 
   // 列表查询
   public async list() {
     const { ctx, app } = this;
-    const { date, type_id = 'all' } = ctx.query;
+    const { date = moment().valueOf(), type_id = 'all' } = ctx.query;
     const page: any = ctx.query.page || 1;
     const page_size: any = ctx.query.page || 5;
 
+    //  判空
+    if (!date || !type_id) {
+      ctx.body = ParamError;
+      return;
+    }
+
     try {
       const token = ctx.request.header.authorization as string;
-      const decode = await app.jwt.verify(token, app.config.jwt.secret) as decodeType | string;
-      if (!(decode && typeof decode === 'object')) {
-        ctx.body = {
-          code: 500,
-          msg: '接口异常',
-          data: false,
-        };
-        return;
-      }
-      // 拿到当前用户的数据
-      const list = await ctx.service.bill.list(decode.id) as [];
+      const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
+      const formatDate = moment(Number(date)).format('YYYY-MM');
 
+      // 拿到当前用户的数据
+      const list = (await ctx.service.bill.list(decode.id)) as [];
       // 过滤数据
       const _list = list.filter((item: item) => {
         if (type_id !== 'all') {
           return (
-            moment(Number(item.date)).format('YYYY-MM') === date &&
+            moment(item.date).format('YYYY-MM') === formatDate &&
             type_id === item.type_id
           );
         }
@@ -98,22 +97,28 @@ export default class BillController extends Controller {
       });
       const listMap = _list
         .reduce((total: any[], current: item) => {
-          const date = moment(Number(current.date)).format('YYYY-MM-DD');
+          const dateValue = moment(current.date).format('YYYY-MM-DD');
           if (
             total &&
             total.length &&
-            total.findIndex((item: item) => item.date === date) > -1
+            total.findIndex(
+              (item: item) =>
+                moment(item.date).format('YYYY-MM-DD') === dateValue
+            ) > -1
           ) {
-            const index = total.findIndex((item: item) => item.date === date);
+            const index = total.findIndex(
+              (item: item) =>
+                moment(item.date).format('YYYY-MM-DD') === dateValue
+            );
             total[index].bills.push(current);
           }
 
           if (
             total &&
             total.length &&
-            total.findIndex(item => item.date === date) === -1
+            total.findIndex(item => item.date === dateValue) === -1
           ) {
-            total.push({ date, bills: [current] });
+            total.push({ date, bills: [current] }); // 这里可以格式化时间
           }
           if (!total.length) {
             total.push({
@@ -123,23 +128,19 @@ export default class BillController extends Controller {
           }
           return total;
         }, [])
-        .sort((a, b) => {
-          if ((typeof b.date === 'number' && typeof a.date === 'number')) {
-            return moment(Number(b.date)).valueOf() - moment(Number(a.date)).valueOf();
-          }
-          return 0;
-        });
+        .sort((a, b) => moment(b.date).valueOf() - moment(a.date).valueOf());
       // 分页处理，listMap 为我们格式化后的全部数据，还未分页。
       const filterListMap = listMap.slice(
         (page - 1) * page_size,
-        page * page_size,
+        page * page_size
       );
 
       // 计算当月总收入和支出
       // 首先获取当月所有账单列表
       const __list = list.filter(
-        (item: item) => moment(Number(item.date)).format('YYYY-MM') === date,
+        (item: item) => moment(item.date).format('YYYY-MM') === formatDate
       );
+
       // 累加计算支出
       const totalExpense = __list.reduce((curr, item: item) => {
         if (item.pay_type === 1) {
@@ -169,11 +170,7 @@ export default class BillController extends Controller {
         },
       };
     } catch {
-      ctx.body = {
-        code: 500,
-        msg: '接口异常',
-        data: false,
-      };
+      ctx.body = InterfaceError;
     }
   }
 
@@ -181,65 +178,53 @@ export default class BillController extends Controller {
   public async detail() {
     const { ctx, app } = this;
     const { id = '' } = ctx.query;
-    if (!id) {
-      ctx.body = {
-        code: 401,
-        msg: '订单id不能为空',
-        data: false,
-      };
-      return;
-    }
-    const token = ctx.request.header.authorization as string;
-    const decode = await app.jwt.verify(token, app.config.jwt.secret) as decodeType | string;
-    if (!(decode && typeof decode === 'object')) {
-      ctx.body = {
-        code: 500,
-        msg: '接口异常',
-        data: false,
-      };
-      return;
-    }
 
+    if (!id) {
+      ctx.body = ParamError;
+      return;
+    }
     try {
+      const token = ctx.request.header.authorization as string;
+      const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
       const data = await ctx.service.bill.detail(id, decode.id);
       ctx.body = {
         code: 200,
         msg: '请求成功',
         data,
       };
-    } catch { ctx.body = { code: 500, msg: '接口异常', data: false }; }
+    } catch {
+      ctx.body = InterfaceError;
+    }
   }
 
   // 编辑
   public async update() {
     const { ctx, app } = this;
-    const { id, amount, type_id, type_name, date, pay_type, remark = '' } = ctx.request.body;
-    if (!amount || !type_id || !type_name || !pay_type) {
-      ctx.body = {
-        code: 400,
-        msg: '参数错误',
-        data: false,
-      };
+    const {
+      id,
+      amount,
+      type_id,
+      type_name,
+      pay_type,
+      date = moment().valueOf(),
+      remark = '',
+    } = ctx.request.body;
+
+    // 判空
+    if (!amount || !type_id || !type_name || !pay_type || !id) {
+      ctx.body = ParamError;
       return;
     }
 
     try {
       const token = ctx.request.header.authorization as string;
-      const decode = await app.jwt.verify(token, app.config.jwt.secret) as decodeType | string;
-      if (!(decode && typeof decode === 'object')) {
-        ctx.body = {
-          code: 500,
-          msg: '接口异常',
-          data: false,
-        };
-        return;
-      }
+      const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
       await ctx.service.bill.update({
         id,
         amount,
         type_id,
         type_name,
-        date: date || moment().format('YYYY-MM-DD HH:mm:ss'),
+        date,
         pay_type,
         remark,
         user_id: decode.id,
@@ -251,11 +236,7 @@ export default class BillController extends Controller {
         data: true,
       };
     } catch {
-      ctx.body = {
-        code: 500,
-        msg: '接口异常',
-        data: false,
-      };
+      ctx.body = InterfaceError;
     }
   }
 
@@ -264,25 +245,13 @@ export default class BillController extends Controller {
     const { ctx, app } = this;
     const { id } = ctx.request.body;
     if (!id) {
-      ctx.body = {
-        code: 400,
-        msg: '参数错误',
-        data: false,
-      };
+      ctx.body = ParamError;
       return;
     }
 
     try {
       const token = ctx.request.header.authorization as string;
-      const decode = await app.jwt.verify(token, app.config.jwt.secret) as decodeType | string;
-      if (!(decode && typeof decode === 'object')) {
-        ctx.body = {
-          code: 500,
-          msg: '接口异常',
-          data: false,
-        };
-        return;
-      }
+      const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
       await ctx.service.bill.delete(id, decode.id);
       ctx.body = {
         code: 200,
@@ -290,45 +259,35 @@ export default class BillController extends Controller {
         data: true,
       };
     } catch {
-      ctx.body = {
-        code: 500,
-        msg: '接口异常',
-        data: false,
-      };
+      ctx.body = InterfaceError;
     }
   }
 
   // data
   public async data() {
     const { ctx, app } = this;
-    const { date = '' } = ctx.query;
-    const token = ctx.request.header.authorization as string;
-    const decode = await app.jwt.verify(token, app.config.jwt.secret) as decodeType | string;
-    if (!(decode && typeof decode === 'object')) {
-      ctx.body = {
-        code: 500,
-        msg: '接口异常',
-        data: false,
-      };
-      return;
-    }
+    const { date = moment().valueOf() } = ctx.query;
     try {
+      const token = ctx.request.header.authorization as string;
+      const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
       const result: any = await ctx.service.bill.list(decode.id);
       // 根据时间参数，筛选出当月所有的账单数据
-      const start = moment(date).startOf('month').unix() * 1000;
-      const end = moment(date).endOf('month').unix() * 1000;
-      const _data = result.filter(item => (Number(item.date) > start && Number(item.date) < end));
+      const start = moment(Number(date)).startOf('month').unix() * 1000;
+      const end = moment(Number(date)).endOf('month').unix() * 1000;
+      const _data = result.filter(item => item.date > start && item.date < end);
       // 总支出
       const total_expense = _data.reduce((total, current) => {
-        if (current.pay_type === 1) {
+        if (current.pay_type === PayTypeEnum.Expense) {
+          console.log('ex', current, current.pay_type);
           total += Number(current.amount);
         }
         return total;
       }, 0);
       // 总收入
       const total_income = _data.reduce((total, current) => {
-        if (current.pay_type === 2) {
-          total + Number(current.amount);
+        if (current.pay_type === PayTypeEnum.Income) {
+          console.log('icon', current, current.pay_type);
+          total += Number(current.amount);
         }
         return total;
       }, 0);
@@ -363,13 +322,8 @@ export default class BillController extends Controller {
           total_data: total_data || [],
         },
       };
-
     } catch {
-      ctx.body = {
-        code: 500,
-        msg: '接口异常',
-        data: false,
-      };
+      ctx.body = InterfaceError;
     }
   }
 }

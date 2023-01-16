@@ -1,4 +1,5 @@
 import { Controller } from 'egg';
+import moment from 'moment';
 import { userInfoType } from '../model/user';
 
 const errorBody = {
@@ -54,7 +55,7 @@ export default class UserController extends Controller {
         password,
         signature: '开心吗',
         avatar: '1',
-        ctime: new Date().valueOf(),
+        ctime: moment().valueOf(),
       });
       ctx.body = {
         code: 200,
