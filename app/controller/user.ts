@@ -1,18 +1,25 @@
 import { Controller } from 'egg';
+import { userInfoType } from '../model/user';
 
-type userInfoType = {
-  id: number;
-  username: string;
-  signature: string;
-  avatar: string;
+const errorBody = {
+  code: 500,
+  msg: '接口异常',
+  data: false,
 };
 
-type decodeType = {
-  id: number;
-  username: string;
-  exp: number;
-  iat: number;
+const voidUserBody = {
+  code: 400,
+  msg: '账号不存在',
+  data: false,
 };
+
+const voidUserInfo = (userInfo): boolean => {
+  if (!userInfo || !userInfo.id) {
+    return true;
+  }
+  return false;
+};
+
 export default class UserController extends Controller {
   public async register() {
     const { ctx } = this;
@@ -20,123 +27,129 @@ export default class UserController extends Controller {
     // 判空
     if (!username || !password) {
       ctx.body = {
-        code: 500,
+        code: 400,
         msg: '账号密码不能为空',
         data: false,
       };
       return;
     }
-    // 验证数据库内是否有改用户名
-    const userInfo = await ctx.service.user.getUserByName(username);
+    try {
+      // 验证数据库内是否有改用户名
+      const userInfo: userInfoType = await ctx.service.user.getUserByName(
+        username
+      );
 
-    // 判断是否已经存在该用户
-    if (userInfo) {
-      ctx.body = {
-        code: 500,
-        msg: '账户名已被注册，请重新输入',
-        data: false,
-      };
-      return;
-    }
-    const result: any = await ctx.service.user.register({
-      username,
-      password,
-      signature: '开心吗',
-      avatar: '1',
-      ctime: new Date().valueOf(),
-    });
-    console.log(12344, result);
-    if (result) {
+      // 有userInfo且有id
+      if (userInfo && userInfo.id) {
+        ctx.body = {
+          code: 400,
+          msg: '账户名已被注册，请重新输入',
+          data: false,
+        };
+        return;
+      }
+
+      await ctx.service.user.register({
+        username,
+        password,
+        signature: '开心吗',
+        avatar: '1',
+        ctime: new Date().valueOf(),
+      });
       ctx.body = {
         code: 200,
         msg: '注册成功',
         data: true,
       };
-    } else {
-      ctx.body = {
-        code: 500,
-        msg: '注册失败',
-        data: false,
-      };
+    } catch {
+      ctx.body = errorBody;
     }
   }
 
   public async login() {
     // app为全局属性，相当于所有插件方法都植入到app对象
     const { ctx, app } = this;
-    // const app: any = this.app;
     const { username, password } = ctx.request.body;
-    // 根据用户名到数据库查找相应id的的信息
-    const userInfo: any = await ctx.service.user.getUserByName(username);
-      console.log(1212, userInfo)
-    // 没找到说明没有该用户
-    if (!userInfo || !userInfo?.id) {
+    // 判空
+    if (!username || !password) {
       ctx.body = {
-        code: 500,
-        msg: '账号不存在',
+        code: 400,
+        msg: '账号密码不能为空',
         data: false,
       };
       return;
     }
+    try {
+      // 根据用户名到数据库查找相应id的的信息
+      const userInfo: userInfoType = await ctx.service.user.getUserByName(
+        username
+      );
 
-    // 找到用户，并且判断密码是否正确
-    if (userInfo && password !== userInfo.password) {
+      // 没找到说明没有该用户
+      if (!userInfo || voidUserInfo(userInfo)) {
+        ctx.body = voidUserBody;
+        return;
+      }
+
+      // 找到用户，并且判断密码是否正确
+      if (password !== userInfo.password) {
+        ctx.body = {
+          code: 400,
+          msg: '密码错误',
+          data: false,
+        };
+        return;
+      }
+      // 生成token加密, app.jwt.sign() 方法接收两个参数，
+      // 第一个参数是对象，对象内是需要加密的内容，
+      // 第二个参数是加密字符串，
+      const token = app.jwt.sign(
+        {
+          id: userInfo.id,
+          username: userInfo.username,
+          exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
+        },
+        app.config.jwt.secret
+      );
       ctx.body = {
-        code: 500,
-        msg: '密码错误',
-        data: null,
+        code: 200,
+        msg: '登录成功',
+        data: { token },
       };
-      return;
+    } catch {
+      ctx.body = errorBody;
     }
-    // 生成token加密, app.jwt.sign() 方法接收两个参数，第一个参数是对象，对象内是需要加密的内容，第二个参数是加密字符串，
-    const token = app.jwt.sign(
-      {
-        id: userInfo.id,
-        username: userInfo.username,
-        exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60,
-      },
-      app.config.jwt.secret,
-    );
-    ctx.body = {
-      code: 200,
-      msg: '登录成功',
-      data: { token },
-    };
   }
 
   // 获取用户信息
   public async getUserInfo() {
     const { ctx, app } = this;
-    const token = (ctx.request.header.authorization as string) || '';
-    const decode = (await app.jwt.verify(token, app.config.jwt.secret)) as
-      | decodeType
-      | string;
-    const isDecode = decode && typeof decode === 'object';
-    const userInfo: userInfoType | null = isDecode
-      ? ((await ctx.service.user.getUserByName(
-        decode.username,
-      )) as userInfoType)
-      : null;
-    if (!userInfo || !isDecode) {
-      ctx.body = {
-        code: 500,
-        msg: '用户信息不存在',
-        data: null,
-      };
-      return;
-    }
+    try {
+      const token = ctx.request.header.authorization as string;
+      const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
+      const userInfo: userInfoType = await ctx.service.user.getUserByName(
+        decode.username
+      );
+      // 没找到说明没有该用户
+      if (!userInfo || voidUserInfo(userInfo)) {
+        ctx.body = voidUserBody;
+        return;
+      }
 
-    ctx.body = {
-      code: 200,
-      msg: 'success',
-      data: {
-        id: userInfo.id,
-        username: userInfo.username,
-        signature: userInfo.signature || '',
-        avatar: userInfo.avatar,
-      },
-    };
-    return;
+      ctx.body = {
+        code: 200,
+        msg: '请求成功',
+        data: {
+          id: userInfo.id,
+          username: userInfo.username,
+          signature: userInfo.signature || '',
+          avatar: userInfo.avatar,
+          ctime: userInfo.ctime,
+        },
+      };
+    } catch {
+      ctx.body = errorBody;
+    }
   }
 
   //  修改个性签名
@@ -145,40 +158,31 @@ export default class UserController extends Controller {
     const { signature = '', avatar = '' } = ctx.request.body;
     try {
       const token = ctx.request.header.authorization as string;
-      const decode = (await app.jwt.verify(token, app.config.jwt.secret)) as
-        | decodeType
-        | string;
-      const isDecode = decode && typeof decode === 'object';
-      const userInfo: userInfoType | null = isDecode
-        ? ((await ctx.service.user.getUserByName(
-          decode.username,
-        )) as userInfoType)
-        : null;
-      if (!userInfo || !isDecode) {
-        ctx.body = {
-          code: 500,
-          msg: '用户信息不存在',
-          data: null,
-        };
+      const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
+      const userInfo: userInfoType = await ctx.service.user.getUserByName(
+        decode.username
+      );
+      // 没找到说明没有该用户
+      if (!userInfo || voidUserInfo(userInfo)) {
+        ctx.body = voidUserBody;
         return;
       }
-      await ctx.service.user.editUserInfo({
-        ...userInfo,
+      const data = {
+        id: userInfo.id,
+        username: userInfo.username,
+        ctime: userInfo.ctime,
         signature,
         avatar,
-      });
+      };
+
+      await ctx.service.user.editUserInfo(data);
       ctx.body = {
         code: 200,
         msg: '请求成功',
-        data: {
-          id: decode.id,
-          username: userInfo.username,
-          signature,
-          avatar,
-        },
+        data,
       };
-    } catch (error) {
-      return error;
+    } catch {
+      ctx.body = errorBody;
     }
   }
 

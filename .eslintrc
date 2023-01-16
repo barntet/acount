@@ -1,6 +1,16 @@
 {
-  "extends": "eslint-config-egg/typescript",
+  "extends": [
+    "eslint-config-egg/typescript",
+    "singleQuote: true",
+    "eslint: recommended"
+  ],
   "parserOptions": {
     "project": "./tsconfig.json"
+  },
+  "rules": {
+    "semi": [
+      "error",
+      "always"
+    ],
   }
 }

@@ -8,7 +8,8 @@ export default class User extends Service {
       // return await app.mysql.get('user', { username });
       return await app.model.User.findOne({ where: { username } });
     } catch (error) {
-      return error;
+      console.log('getUserByName', error);
+      throw error;
     }
   }
 
@@ -17,9 +18,10 @@ export default class User extends Service {
     const { app } = this;
     try {
       // return await app.mysql.insert('user', params);
-      return await app.model.user1.create(params);
+      return await app.model.User.create(params);
     } catch (error) {
-      return error;
+      console.log('register', error);
+      throw error;
     }
   }
 
@@ -27,15 +29,17 @@ export default class User extends Service {
   public async editUserInfo(params) {
     const { app } = this;
     try {
-      return await app.mysql.update(
-        'user',
-        {
-          ...params,
-        },
-        { id: params.id }
-      );
+      // return await app.mysql.update(
+      //   'user',
+      //   {
+      //     ...params,
+      //   },
+      //   { id: params.id }
+      // );
+      return await app.model.User.update(params, { where: { id: params.id } });
     } catch (error) {
-      return error;
+      console.log('editUserInfo', error);
+      throw error;
     }
   }
 }
