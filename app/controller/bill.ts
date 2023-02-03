@@ -25,6 +25,16 @@ const PayTypeEnum = {
   Income: 2,
 };
 
+const getBalance = (data: [], type: number): number => {
+  return data.reduce((total, current: any) => {
+    if (current.pay_type === type) {
+      total += Number(current.amount);
+    }
+    return total;
+  }, 0);
+
+}
+
 export default class BillController extends Controller {
   public async add() {
     const { ctx, app } = this;
@@ -269,38 +279,47 @@ export default class BillController extends Controller {
   // data
   public async data() {
     const { ctx, app } = this;
-    const { date = moment().valueOf() } = ctx.query;
+    const { date } = ctx.query;
+    //  判空
+    if (!date) {
+      ctx.body = ParamError;
+      return;
+    }
+
     try {
       const token = ctx.request.header['x-access-token'] as string;
       const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
-      const result: any = await ctx.service.bill.list(decode.id);
+
+      const data = await ctx.service.bill.list(decode.id) as [];
       // 根据时间参数，筛选出当月所有的账单数据
       const start = moment(Number(date)).startOf('month').unix() * 1000;
       const end = moment(Number(date)).endOf('month').unix() * 1000;
-      const _data = result.filter(item => item.date > start && item.date < end);
+      const _data = data.filter((item: any) => item.date > start && item.date < end) as []
       // 总支出
-      const total_expense = _data.reduce((total, current) => {
-        if (current.pay_type === PayTypeEnum.Expense) {
-          total += Number(current.amount);
-        }
-        return total;
-      }, 0);
+      const totalExpense = getBalance(_data, PayTypeEnum.Expense)
+      // const totalExpense = _data.reduce((total, current: any) => {
+      //   if (current.pay_type === PayTypeEnum.Expense) {
+      //     total += Number(current.amount);
+      //   }
+      //   return total;
+      // }, 0);
       // 总收入
-      const total_income = _data.reduce((total, current) => {
-        if (current.pay_type === PayTypeEnum.Income) {
-          total += Number(current.amount);
-        }
-        return total;
-      }, 0);
+      const totalIncome = getBalance(_data, PayTypeEnum.Income)
+      // const totalIncome = _data.reduce((total, current: any) => {
+      //   if (current.pay_type === PayTypeEnum.Income) {
+      //     total += Number(current.amount);
+      //   }
+      //   return total;
+      // }, 0);
 
       // 获取收支构成
-      let total_data = _data.reduce((total, current) => {
-        const index = total.findIndex(item => item.type_id === current.type_id);
+      let total_data = _data.reduce((total: any, current: any) => {
+        const index = total.findIndex((item: any) => item.type_id === current.type_id);
         if (index === -1) {
           total.push({
             type_id: current.type_id,
             type_name: current.type_name,
-            pay_type: current.type_pay,
+            pay_type: current.pay_type,
             number: Number(current.amount),
           });
         }
@@ -313,14 +332,15 @@ export default class BillController extends Controller {
         item.number = Number(Number(item.number).toFixed(2));
         return item;
       });
+      console.log(335, total_data)
 
       ctx.body = {
         code: 0,
         msg: '请求成功',
         data: {
-          total_expense: Number(total_expense).toFixed(2),
-          total_income: Number(total_income).toFixed(2),
-          total_data: total_data || [],
+          totalExpense: Number(totalExpense).toFixed(2),
+          totalIncome: Number(totalIncome).toFixed(2),
+          list: total_data || [],
         },
       };
     } catch {
