@@ -43,7 +43,7 @@ export default class BillController extends Controller {
       return;
     }
     try {
-      const token = ctx.request.header.authorization as string;
+      const token = ctx.request.header['x-access-token'] as string;
       const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
 
       await ctx.service.bill.add({
@@ -56,7 +56,7 @@ export default class BillController extends Controller {
         user_id: decode.id,
       });
       ctx.body = {
-        code: 200,
+        code: 0,
         msg: '添加成功',
         data: true,
       };
@@ -68,9 +68,9 @@ export default class BillController extends Controller {
   // 列表查询
   public async list() {
     const { ctx, app } = this;
-    const { date = moment().valueOf(), type_id = 'all' } = ctx.query;
-    const page: any = ctx.query.page || 1;
-    const page_size: any = ctx.query.page || 5;
+    const { date, type_id } = ctx.query;
+    const page: any = Number(ctx.query.page) || 1;
+    const page_size: any = Number(ctx.query.page_size) || 10;
 
     //  判空
     if (!date || !type_id) {
@@ -79,7 +79,7 @@ export default class BillController extends Controller {
     }
 
     try {
-      const token = ctx.request.header.authorization as string;
+      const token = ctx.request.header['x-access-token'] as string;
       const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
       const formatDate = moment(Number(date)).format('YYYY-MM');
 
@@ -90,11 +90,12 @@ export default class BillController extends Controller {
         if (type_id !== 'all') {
           return (
             moment(item.date).format('YYYY-MM') === formatDate &&
-            type_id === item.type_id
+            type_id == item.type_id // 这里typeid传入的是数字，但是接收到的是字符串
           );
         }
-        return [];
+        return moment(item.date).format('YYYY-MM') === formatDate
       });
+
       const listMap = _list
         .reduce((total: any[], current: item) => {
           const dateValue = moment(current.date).format('YYYY-MM-DD');
@@ -116,13 +117,13 @@ export default class BillController extends Controller {
           if (
             total &&
             total.length &&
-            total.findIndex(item => item.date === dateValue) === -1
+            total.findIndex(item => (moment(item.date).format('YYYY-MM-DD') === dateValue)) === -1
           ) {
-            total.push({ date, bills: [current] }); // 这里可以格式化时间
+            total.push({ date: current.date, bills: [current] }); // 这里可以格式化时间
           }
           if (!total.length) {
             total.push({
-              date,
+              date: current.date,
               bills: [current],
             });
           }
@@ -134,6 +135,8 @@ export default class BillController extends Controller {
         (page - 1) * page_size,
         page * page_size
       );
+
+      listMap.slice((page - 1) * page_size, page * page_size)
 
       // 计算当月总收入和支出
       // 首先获取当月所有账单列表
@@ -160,7 +163,7 @@ export default class BillController extends Controller {
 
       // 返回数据
       ctx.body = {
-        code: 200,
+        code: 0,
         msg: '请求成功',
         data: {
           totalExpense, // 当月支出
@@ -184,11 +187,11 @@ export default class BillController extends Controller {
       return;
     }
     try {
-      const token = ctx.request.header.authorization as string;
+      const token = ctx.request.header['x-access-token'] as string;
       const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
       const data = await ctx.service.bill.detail(id, decode.id);
       ctx.body = {
-        code: 200,
+        code: 0,
         msg: '请求成功',
         data,
       };
@@ -217,7 +220,7 @@ export default class BillController extends Controller {
     }
 
     try {
-      const token = ctx.request.header.authorization as string;
+      const token = ctx.request.header['x-access-token'] as string;
       const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
       await ctx.service.bill.update({
         id,
@@ -231,7 +234,7 @@ export default class BillController extends Controller {
       });
 
       ctx.body = {
-        code: 200,
+        code: 0,
         mag: '请求成功',
         data: true,
       };
@@ -250,11 +253,11 @@ export default class BillController extends Controller {
     }
 
     try {
-      const token = ctx.request.header.authorization as string;
+      const token = ctx.request.header['x-access-token'] as string;
       const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
       await ctx.service.bill.delete(id, decode.id);
       ctx.body = {
-        code: 200,
+        code: 0,
         msg: '删除成功',
         data: true,
       };
@@ -268,7 +271,7 @@ export default class BillController extends Controller {
     const { ctx, app } = this;
     const { date = moment().valueOf() } = ctx.query;
     try {
-      const token = ctx.request.header.authorization as string;
+      const token = ctx.request.header['x-access-token'] as string;
       const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
       const result: any = await ctx.service.bill.list(decode.id);
       // 根据时间参数，筛选出当月所有的账单数据
@@ -278,7 +281,6 @@ export default class BillController extends Controller {
       // 总支出
       const total_expense = _data.reduce((total, current) => {
         if (current.pay_type === PayTypeEnum.Expense) {
-          console.log('ex', current, current.pay_type);
           total += Number(current.amount);
         }
         return total;
@@ -286,7 +288,6 @@ export default class BillController extends Controller {
       // 总收入
       const total_income = _data.reduce((total, current) => {
         if (current.pay_type === PayTypeEnum.Income) {
-          console.log('icon', current, current.pay_type);
           total += Number(current.amount);
         }
         return total;
@@ -314,7 +315,7 @@ export default class BillController extends Controller {
       });
 
       ctx.body = {
-        code: 200,
+        code: 0,
         msg: '请求成功',
         data: {
           total_expense: Number(total_expense).toFixed(2),

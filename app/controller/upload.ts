@@ -29,7 +29,7 @@ export default class UploadController extends Controller {
       ctx.cleanupRequestFiles();
     }
     ctx.body = {
-      code: 200,
+      code: 0,
       msg: '上传成功',
       data: uploadDir.replace(/app/g, ''),
     };

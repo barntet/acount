@@ -32,7 +32,7 @@ export default class HomeController extends Controller {
     try {
       await ctx.service.home.addUser(name);
       ctx.body = {
-        code: 200,
+        code: 0,
         msg: '添加成功',
         data: null,
       };
@@ -52,7 +52,7 @@ export default class HomeController extends Controller {
     try {
       await ctx.service.home.editUser(id, name);
       ctx.body = {
-        code: 200,
+        code: 0,
         msg: '添加成功',
         data: true,
       };
@@ -68,7 +68,7 @@ export default class HomeController extends Controller {
     try {
       await ctx.service.home.deleteUser(id);
       ctx.body = {
-        code: 200,
+        code: 0,
         msg: '删除成功',
         data: true,
       };

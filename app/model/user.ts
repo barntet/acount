@@ -1,4 +1,4 @@
-import { Application } from 'egg';
+import { Application, } from 'egg';
 // https://github.com/eggjs/egg-sequelize
 // use: app.model.User.
 
@@ -27,4 +27,4 @@ export type userInfoType = {
   signature: string;
   avatar: string;
   ctime: number;
-} | null;
+} | null | Record<any, any>;

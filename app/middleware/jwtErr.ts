@@ -1,6 +1,6 @@
 export default function jwtErr(secret) {
   return async (ctx, next) => {
-    const token = ctx.request.header.authorization;
+    const token = ctx.request.header['x-access-token'];
     if (token) {
       try {
         ctx.app.jwt.verify(token, secret);

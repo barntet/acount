@@ -58,7 +58,7 @@ export default class UserController extends Controller {
         ctime: moment().valueOf(),
       });
       ctx.body = {
-        code: 200,
+        code: 0,
         msg: '注册成功',
         data: true,
       };
@@ -113,7 +113,7 @@ export default class UserController extends Controller {
         app.config.jwt.secret
       );
       ctx.body = {
-        code: 200,
+        code: 0,
         msg: '登录成功',
         data: { token },
       };
@@ -126,7 +126,7 @@ export default class UserController extends Controller {
   public async getUserInfo() {
     const { ctx, app } = this;
     try {
-      const token = ctx.request.header.authorization as string;
+      const token = ctx.request.header['x-access-token'] as string;
       const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
       const userInfo: userInfoType = await ctx.service.user.getUserByName(
         decode.username
@@ -138,7 +138,7 @@ export default class UserController extends Controller {
       }
 
       ctx.body = {
-        code: 200,
+        code: 0,
         msg: '请求成功',
         data: {
           id: userInfo.id,
@@ -158,7 +158,7 @@ export default class UserController extends Controller {
     const { ctx, app } = this;
     const { signature = '', avatar = '' } = ctx.request.body;
     try {
-      const token = ctx.request.header.authorization as string;
+      const token = ctx.request.header['x-access-token'] as string;
       const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
       const userInfo: userInfoType = await ctx.service.user.getUserByName(
         decode.username
@@ -178,7 +178,7 @@ export default class UserController extends Controller {
 
       await ctx.service.user.editUserInfo(data);
       ctx.body = {
-        code: 200,
+        code: 0,
         msg: '请求成功',
         data,
       };
@@ -190,14 +190,14 @@ export default class UserController extends Controller {
   // test get token
   public async test() {
     const { ctx, app } = this;
-    const token = ctx.request.header.authorization as string;
+    const token = ctx.request.header['x-access-token'] as string;
     const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
     let data = null;
     if (decode) {
       data = { ...decode };
     }
     ctx.body = {
-      code: 200,
+      code: 0,
       msg: '获取成功',
       data,
     };
