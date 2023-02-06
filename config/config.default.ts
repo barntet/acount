@@ -28,20 +28,20 @@ export default (appInfo: EggAppInfo) => {
     mapping: { '.html': 'ejs' }, // key是html后缀，会自动渲染.html文件，该配置是将 view 文件夹下的.html后缀的文件，识别为.ejs
   };
 
-  config.mysql = {
-    // 单数据库配置
-    client: {
-      host: 'localhost',
-      port: '3306',
-      user: 'root',
-      password: 'mysqlhhxx0@',
-      database: 'ledger',
-    },
-    // 是否加载到app上 默认开启
-    app: true,
-    // 是否加载到agent上, 默认 false
-    agent: false,
-  };
+  // config.mysql = {
+  //   // 单数据库配置
+  //   client: {
+  //     host: 'localhost',
+  //     port: '3306',
+  //     user: 'root',
+  //     password: 'mysqlhhxx0@',
+  //     database: 'ledger',
+  //   },
+  //   // 是否加载到app上 默认开启
+  //   app: true,
+  //   // 是否加载到agent上, 默认 false
+  //   agent: false,
+  // };
 
   config.jwt = {
     secret: 'barnett',
@@ -63,7 +63,7 @@ export default (appInfo: EggAppInfo) => {
 
   config.sequelize = {
     database: 'ledger',
-    password: 'mysqlhhxx0@',
+    password: 'mysqlhhxx9@',
   };
 
   // the return config will combines to EggAppConfig

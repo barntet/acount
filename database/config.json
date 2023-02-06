@@ -1,7 +1,7 @@
 {
   "development": {
     "username": "root",
-    "password": "mysqlhhxx0@",
+    "password": "mysqlhhxx9@",
     "database": "ledger",
     "host": "127.0.0.1",
     "dialect": "mysql"

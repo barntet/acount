@@ -11,8 +11,13 @@ $ npm i
 $ npm run dev
 $ open http://localhost:7001/
 
+创建表
 generate database
 npx sequelize migration:generate--name=init-user 
+
+升级迁移
+npx sequelize db:migrate
+
 ```
 
 Don't tsc compile at development mode, if you had run `tsc` then you need to `npm run clean` before `npm run dev`.
