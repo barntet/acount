@@ -63,7 +63,7 @@ export default (appInfo: EggAppInfo) => {
 
   config.sequelize = {
     database: 'ledger',
-    password: 'mysqlhhxx9@',
+    password: 'Mysqlhhxx9@',
   };
 
   // the return config will combines to EggAppConfig
