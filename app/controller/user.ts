@@ -1,6 +1,6 @@
 import { Controller } from 'egg';
 import moment from 'moment';
-import { userInfoType } from '../model/user';
+import { userInfoType, } from '../model/user';
 
 const errorBody = {
   code: 500,
@@ -182,6 +182,68 @@ export default class UserController extends Controller {
         msg: '请求成功',
         data,
       };
+    } catch {
+      ctx.body = errorBody;
+    }
+  }
+
+  public async modifyPass() {
+    const { ctx, app } = this;
+    const { oldPass = '', newPass = '', newPassT = '' } = ctx.request.body;
+
+    try {
+      const token = ctx.request.header['x-access-token'] as string;
+      const decode: any = await app.jwt.verify(token, app.config.jwt.secret);
+      if (!decode) return
+      if (decode.username == 'admin') {
+        ctx.body = {
+          code: 400,
+          msg: '管理员账户，不允许修改密码',
+          data: null
+        }
+        return;
+      }
+      const userInfo: userInfoType = await ctx.service.user.getUserByName(
+        decode.username
+      );
+      // 没找到说明没有该用户
+      if (!userInfo || voidUserInfo(userInfo)) {
+        ctx.body = voidUserBody;
+        return;
+      }
+
+      if (oldPass != userInfo.password) {
+        ctx.body = {
+          code: 400,
+          msg: '原密码错误',
+          data: null
+        }
+        return
+      }
+
+      if (newPass != newPassT) {
+        ctx.body = {
+          code: 400,
+          msg: '新密码不一致',
+          data: null
+        }
+        return
+      }
+
+      await ctx.service.user.modifyPass({
+        id: userInfo.id,
+        username: userInfo.username,
+        ctime: userInfo.ctime,
+        signature: userInfo.signature,
+        avatar: userInfo.avatar,
+        password: newPass
+      })
+
+      ctx.body = {
+        code: 200,
+        msg: '请求成功',
+        data: null
+      }
     } catch {
       ctx.body = errorBody;
     }

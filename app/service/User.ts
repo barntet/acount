@@ -42,4 +42,18 @@ export default class User extends Service {
       throw error;
     }
   }
+
+  // 修改密码
+  public async modifyPass(params) {
+    console.log(params.id)
+    const { app } = this;
+    try {
+      return await app.model.User.update(params, { where: { id: params.id } })
+    } catch (error) {
+      console.log('modifyPass', error);
+      throw error;
+    }
+  }
 }
+
+
